@@ -1,0 +1,23 @@
+version = 0.1
+[aw2-dev]
+[aw2-dev.deploy]
+[aw2-dev.deploy.parameters]
+stack_name = "aw2-dev"
+s3_bucket = "aws-sam-977407872120"
+s3_prefix = "aw2-dev"
+region = "ap-southeast-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+image_repositories = []
+
+[aw2-prod]
+[aw2-prod.deploy]
+[aw2-prod.deploy.parameters]
+stack_name = "aw2-prod"
+s3_bucket = "aws-sam-977407872120"
+s3_prefix = "aw2-prod"
+region = "ap-southeast-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+image_repositories = []
+

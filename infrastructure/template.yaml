@@ -1,0 +1,18 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aw2-api
+
+  AlgoWolf v2 copy trading application
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+Resources:
+  UserApiStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: stacks/user-api.yaml
+      Parameters:
+        EnvironmentName: !Sub ${EnvironmentName}

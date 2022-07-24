@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Handler: function.handler
+    Runtime: python3.9
+    Architectures:
+      - x86_64
+    Tracing: Active
+
+  Api:
+    TracingEnabled: True
+
+Description: >
+  aw2-api-user-api
+
+  User api for AlgoWolf v2
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+Resources:
+  UserApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ../../user_api/
+
+  UserApiDataSourceServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - appsync.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Policies: 
+        - PolicyName: !Sub ${EnvironmentName}-AppSyncInvokeLambda
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "lambda:InvokeFunction"
+                Resource: !GetAtt UserApiFunction.Arn
+
+  UserApi:
+    Type: AWS::AppSync::GraphQLApi
+    Properties:
+      Name: !Sub ${EnvironmentName}-UserApi
+      AuthenticationType: API_KEY
+      XrayEnabled: True
+
+  UserApiSchema:
+    Type: AWS::AppSync::GraphQLSchema
+    Properties:
+      ApiId: !GetAtt UserApi.ApiId
+      Definition: #exec tools/cfn-snippet-generator file-to-yaml-multiline ../user_api/schema.gql
+
+  UserApiDataSource:
+    Type: AWS::AppSync::DataSource
+    Properties:
+      ApiId: !GetAtt UserApi.ApiId
+      Type: AWS_LAMBDA
+      Name: !Join ["_", !Split ["-", !Sub "${EnvironmentName}-UserApiDataSource"]]
+      ServiceRoleArn: !GetAtt UserApiDataSourceServiceRole.Arn
+      Description: "Data source for User Api"
+      LambdaConfig:
+        LambdaFunctionArn: !GetAtt UserApiFunction.Arn
+
+  UserApiResolver:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt UserApi.ApiId
+      TypeName: Query
+      FieldName: hello
+      DataSourceName: !GetAtt UserApiDataSource.Name
+
