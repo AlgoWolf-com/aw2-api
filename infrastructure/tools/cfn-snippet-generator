@@ -2,16 +2,34 @@
 import os
 import sys
 
+escape_map = {
+    '"': r"\"",
+}
+
 
 class Gen:
     @staticmethod
     def file_to_yaml_multiline(file_path):
         file_text = os.popen(f"cat {file_path}").read()
-        print(f'"{file_text}"')
+        escaped_text = file_text.translate(str.maketrans(escape_map))
+        print(f'"{escaped_text}"')
 
     @staticmethod
-    def generate_graphql_resolvers(*resolver_names):
-        return
+    def generate_graphql_resolver(api_name, data_source_name, type_name, field_name):
+        field_name_title = "".join(word.title() for word in field_name.split("_"))
+        resource_name = f"UserApiResolver{type_name}{field_name_title}"
+        # resource_name = f"UserApiResolver"
+        print(
+            f"""
+  {resource_name}:
+    Type: AWS::AppSync::Resolver
+    Properties:
+      ApiId: !GetAtt {api_name}.ApiId
+      TypeName: {type_name}
+      FieldName: {field_name}
+      DataSourceName: !GetAtt {data_source_name}.Name
+            """
+        )
 
 
 if __name__ == "__main__":

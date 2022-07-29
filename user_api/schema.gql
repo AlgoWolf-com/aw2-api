@@ -4,4 +4,10 @@ schema {
 
 type Query {
     hello: String!
+    login(input: LoginInput): String! @aws_api_key
+}
+
+input LoginInput {
+    email: String!
+    password: String!
 }
