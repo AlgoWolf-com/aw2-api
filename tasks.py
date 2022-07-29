@@ -1,4 +1,4 @@
-from pathlib import Path
+# pylint: disable=redefined-outer-name
 from invoke import task, Collection
 
 prod = Collection("prod")

@@ -1,4 +1,4 @@
-# pylint: disable=redefined-outer-name,import-outside-toplevel
+# pylint: disable=redefined-outer-name,import-outside-toplevel,line-too-long
 import os
 from unittest import mock
 from typing import Callable, Mapping
