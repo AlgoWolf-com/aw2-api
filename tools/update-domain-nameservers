@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+
+
+def get_hosted_zone_id(domain_name: str) -> str:
+    print("Getting hosted zone id...")
+    result = json.loads(os.popen("aws route53 list-hosted-zones").read())
+    for hosted_zone in result["HostedZones"]:
+        if hosted_zone.get("Name").rstrip(".") == domain_name:
+            return hosted_zone["Id"]
+
+
+def get_hosted_zone_nameservers(hosted_zone_id: str) -> str:
+    print("Getting hosted zone nameservers...")
+    result = json.loads(
+        os.popen(
+            f"aws route53 list-resource-record-sets --hosted-zone-id {hosted_zone_id}"
+        ).read()
+    )
+    nameservers = ""
+    for record_set in result["ResourceRecordSets"]:
+        if record_set["Type"] == "NS":
+            nameservers = " ".join(
+                [
+                    f"Name={record['Value'].rstrip('.')}"
+                    for record in record_set["ResourceRecords"]
+                ]
+            )
+            break
+
+    return nameservers
+
+
+def update_domain_nameservers(domain_name: str) -> None:
+    hosted_zone_id = get_hosted_zone_id(domain_name)
+    if hosted_zone_id is not None:
+        nameservers = get_hosted_zone_nameservers(hosted_zone_id)
+        result = os.popen(
+            "aws route53domains update-domain-nameservers "
+            "--region us-east-1 "
+            f"--domain-name {domain_name} "
+            f"--nameservers {nameservers} "
+        ).read()
+        print(result)
+    print("DONE.")
+
+
+if __name__ == "__main__":
+    update_domain_nameservers(sys.argv[1])

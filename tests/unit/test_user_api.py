@@ -1,8 +1,13 @@
-# pylint: disable=redefined-outer-name,import-outside-toplevel,line-too-long
+# pylint: disable=redefined-outer-name,import-outside-toplevel
 import os
+import json
 from unittest import mock
 from typing import Callable, Mapping
 import pytest
+
+
+class MockLambdaContext:
+    aws_request_id = "abcd123456"
 
 
 @pytest.fixture(autouse=True)
@@ -25,182 +30,50 @@ def handler() -> Callable:
 
 
 @pytest.fixture
-def hello_event() -> Mapping:
+def get_message_event() -> Mapping:
     return {
-        "arguments": {},
-        "identity": None,
-        "source": None,
-        "request": {
-            "headers": {
-                "x-forwarded-for": "103.1.56.45, 130.176.212.8",
-                "sec-ch-ua-mobile": "?0",
-                "cloudfront-viewer-country": "AU",
-                "cloudfront-is-tablet-viewer": "false",
-                "x-amzn-requestid": "8c5a496c-0cbd-4074-b231-440709f5777c",
-                "via": "2.0 d565d9b03fa73bc2ae98eaadac0992b6.cloudfront.net (CloudFront)",
-                "cloudfront-forwarded-proto": "https",
-                "origin": "https://ap-southeast-2.console.aws.amazon.com",
-                "content-length": "150",
-                "x-forwarded-proto": "https",
-                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-                "host": "pszdwi27krchhe2m7synyvpyi4.appsync-api.ap-southeast-2.amazonaws.com",
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
-                "cloudfront-is-mobile-viewer": "false",
-                "accept": "application/json, text/plain, */*",
-                "cloudfront-viewer-asn": "7545",
-                "cloudfront-is-smarttv-viewer": "false",
-                "accept-encoding": "gzip, deflate, br",
-                "referer": "https://ap-southeast-2.console.aws.amazon.com/",
-                "x-api-key": "da2-lhjvk7hnerdqrchdhoaaked2zm",
-                "content-type": "application/json",
-                "sec-fetch-mode": "cors",
-                "x-amzn-trace-id": "Root=1-62e389f5-240eed67347039b632f49009",
-                "x-amz-cf-id": "ZCvUvqOdWnsmxdyyhDKXOgMs2GxtpChOBEqJH6KCNnTjbq7UjYP7kQ==",
-                "sec-fetch-dest": "empty",
-                "x-amz-user-agent": "AWS-Console-AppSync/",
-                "sec-ch-ua-platform": '"macOS"',
-                "cloudfront-is-desktop-viewer": "true",
-                "sec-fetch-site": "cross-site",
-                "sec-ch-ua": '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
-                "x-forwarded-port": "443",
+        "version": "2.0",
+        "routeKey": "ANY /users/{proxy+}",
+        "rawPath": "/Dev/users/message",
+        "rawQueryString": "",
+        "headers": {
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br",
+            "content-length": "22",
+            "content-type": "application/json",
+            "host": "api.ethanhollins.com",
+            "postman-token": "59685e20-4201-41ce-9642-7d72a991df07",
+            "user-agent": "PostmanRuntime/7.29.2",
+            "x-amzn-trace-id": "Root=1-62e77021-1cbaedee03c8e5d57b76cc04",
+            "x-forwarded-for": "220.240.78.250",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+        },
+        "requestContext": {
+            "accountId": "977407872120",
+            "apiId": "frd6dnh21f",
+            "domainName": "api.ethanhollins.com",
+            "domainPrefix": "api",
+            "http": {
+                "method": "GET",
+                "path": "/Dev/users/message",
+                "protocol": "HTTP/1.1",
+                "sourceIp": "220.240.78.250",
+                "userAgent": "PostmanRuntime/7.29.2",
             },
-            "domainName": None,
+            "requestId": "WK51UjBzSwMEJDQ=",
+            "routeKey": "ANY /users/{proxy+}",
+            "stage": "Dev",
+            "time": "01/Aug/2022:06:18:09 +0000",
+            "timeEpoch": 1659334689888,
         },
-        "prev": None,
-        "info": {
-            "selectionSetList": [],
-            "selectionSetGraphQL": "",
-            "fieldName": "hello",
-            "parentTypeName": "Query",
-            "variables": {},
-        },
-        "stash": {},
+        "pathParameters": {"proxy": "message"},
+        "isBase64Encoded": False,
     }
 
 
-@pytest.fixture
-def successful_login_event() -> Mapping:
-    return {
-        "arguments": {
-            "input": {"email": "ethanjohol@gmail.com", "password": "Rxs#aBtD+S&9"}
-        },
-        "identity": None,
-        "source": None,
-        "request": {
-            "headers": {
-                "x-forwarded-for": "103.1.56.45, 130.176.212.8",
-                "sec-ch-ua-mobile": "?0",
-                "cloudfront-viewer-country": "AU",
-                "cloudfront-is-tablet-viewer": "false",
-                "x-amzn-requestid": "8c5a496c-0cbd-4074-b231-440709f5777c",
-                "via": "2.0 d565d9b03fa73bc2ae98eaadac0992b6.cloudfront.net (CloudFront)",
-                "cloudfront-forwarded-proto": "https",
-                "origin": "https://ap-southeast-2.console.aws.amazon.com",
-                "content-length": "150",
-                "x-forwarded-proto": "https",
-                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-                "host": "pszdwi27krchhe2m7synyvpyi4.appsync-api.ap-southeast-2.amazonaws.com",
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
-                "cloudfront-is-mobile-viewer": "false",
-                "accept": "application/json, text/plain, */*",
-                "cloudfront-viewer-asn": "7545",
-                "cloudfront-is-smarttv-viewer": "false",
-                "accept-encoding": "gzip, deflate, br",
-                "referer": "https://ap-southeast-2.console.aws.amazon.com/",
-                "x-api-key": "da2-lhjvk7hnerdqrchdhoaaked2zm",
-                "content-type": "application/json",
-                "sec-fetch-mode": "cors",
-                "x-amzn-trace-id": "Root=1-62e389f5-240eed67347039b632f49009",
-                "x-amz-cf-id": "ZCvUvqOdWnsmxdyyhDKXOgMs2GxtpChOBEqJH6KCNnTjbq7UjYP7kQ==",
-                "sec-fetch-dest": "empty",
-                "x-amz-user-agent": "AWS-Console-AppSync/",
-                "sec-ch-ua-platform": '"macOS"',
-                "cloudfront-is-desktop-viewer": "true",
-                "sec-fetch-site": "cross-site",
-                "sec-ch-ua": '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
-                "x-forwarded-port": "443",
-            },
-            "domainName": None,
-        },
-        "prev": None,
-        "info": {
-            "selectionSetList": [],
-            "selectionSetGraphQL": "",
-            "fieldName": "login",
-            "parentTypeName": "Query",
-            "variables": {},
-        },
-        "stash": {},
-    }
-
-
-@pytest.fixture
-def undefined_query_event() -> Mapping:
-    return {
-        "arguments": {},
-        "identity": None,
-        "source": None,
-        "request": {
-            "headers": {
-                "x-forwarded-for": "103.1.56.45, 130.176.212.8",
-                "sec-ch-ua-mobile": "?0",
-                "cloudfront-viewer-country": "AU",
-                "cloudfront-is-tablet-viewer": "false",
-                "x-amzn-requestid": "8c5a496c-0cbd-4074-b231-440709f5777c",
-                "via": "2.0 d565d9b03fa73bc2ae98eaadac0992b6.cloudfront.net (CloudFront)",
-                "cloudfront-forwarded-proto": "https",
-                "origin": "https://ap-southeast-2.console.aws.amazon.com",
-                "content-length": "150",
-                "x-forwarded-proto": "https",
-                "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
-                "host": "pszdwi27krchhe2m7synyvpyi4.appsync-api.ap-southeast-2.amazonaws.com",
-                "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.0.0 Safari/537.36",
-                "cloudfront-is-mobile-viewer": "false",
-                "accept": "application/json, text/plain, */*",
-                "cloudfront-viewer-asn": "7545",
-                "cloudfront-is-smarttv-viewer": "false",
-                "accept-encoding": "gzip, deflate, br",
-                "referer": "https://ap-southeast-2.console.aws.amazon.com/",
-                "x-api-key": "da2-lhjvk7hnerdqrchdhoaaked2zm",
-                "content-type": "application/json",
-                "sec-fetch-mode": "cors",
-                "x-amzn-trace-id": "Root=1-62e389f5-240eed67347039b632f49009",
-                "x-amz-cf-id": "ZCvUvqOdWnsmxdyyhDKXOgMs2GxtpChOBEqJH6KCNnTjbq7UjYP7kQ==",
-                "sec-fetch-dest": "empty",
-                "x-amz-user-agent": "AWS-Console-AppSync/",
-                "sec-ch-ua-platform": '"macOS"',
-                "cloudfront-is-desktop-viewer": "true",
-                "sec-fetch-site": "cross-site",
-                "sec-ch-ua": '".Not/A)Brand";v="99", "Google Chrome";v="103", "Chromium";v="103"',
-                "x-forwarded-port": "443",
-            },
-            "domainName": None,
-        },
-        "prev": None,
-        "info": {
-            "selectionSetList": [],
-            "selectionSetGraphQL": "",
-            "fieldName": "foo",
-            "parentTypeName": "Query",
-            "variables": {},
-        },
-        "stash": {},
-    }
-
-
-def test_hello(handler: Callable, hello_event: Mapping) -> None:
-    result = handler(hello_event, None)
-    assert result == "Hello World!"
-
-
-def test_successful_login(handler: Callable, successful_login_event: Mapping) -> None:
-    result = handler(successful_login_event, None)
-    assert isinstance(result, str)
-
-
-def test_undefined_query(handler: Callable, undefined_query_event: Mapping) -> None:
-    try:
-        handler(undefined_query_event, None)
-        assert False
-    except AttributeError:
-        assert True
+def test_get_message(handler: Callable, get_message_event: Mapping) -> None:
+    result = handler(get_message_event, MockLambdaContext())
+    assert result["statusCode"] == 200 and result["body"] == json.dumps(
+        {"message": "Hello World!"}
+    )

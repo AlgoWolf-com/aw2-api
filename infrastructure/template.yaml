@@ -10,9 +10,40 @@ Parameters:
     Type: String
 
 Resources:
+  FrontendStack:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location: stacks/frontend.yaml
+      Parameters:
+        EnvironmentName: !Sub ${EnvironmentName}
+
+  ApiHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: ethanhollins.com
+
+  ApiRecordSetGroup:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId: !Ref ApiHostedZone
+      RecordSets:
+        - AliasTarget:
+            DNSName: !Sub ${FrontendStack.Outputs.FrontendCloudFrontDistributionDomainName}
+            EvaluateTargetHealth: false
+            HostedZoneId: Z2FDTNDATAQYW2
+          Name: www.ethanhollins.com
+          Type: A
+        - AliasTarget:
+            DNSName: !Sub ${FrontendStack.Outputs.FrontendCloudFrontDistributionDomainName}
+            EvaluateTargetHealth: false
+            HostedZoneId: Z2FDTNDATAQYW2
+          Name: ethanhollins.com
+          Type: A
+
   UserApiStack:
     Type: AWS::Serverless::Application
     Properties:
       Location: stacks/user-api.yaml
       Parameters:
         EnvironmentName: !Sub ${EnvironmentName}
+        ApiHostedZoneId: !Ref ApiHostedZone

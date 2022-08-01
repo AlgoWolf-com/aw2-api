@@ -1,20 +1,19 @@
-import json
 import logging
-from .resolvers import Query
+from apigw import Router, Response
+from util import validate_json_schema
+from datatypes.constants import HttpMethod
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.critical("Function initialized")
+logger.critical("Function startup")
 
-resolver_map = {"Query": Query}
+router = Router()
 
 
-def handler(event, _):
-    logger.debug("Event:\n%s", json.dumps(event, indent=2))
+@validate_json_schema(__file__)
+def handler(event, ctx):
+    return router.handle(event, ctx)
 
-    parent_name = event["info"]["parentTypeName"]
-    field_name = event["info"]["fieldName"]
-    result = getattr(resolver_map[parent_name], field_name)(
-        event["prev"], event["arguments"], event["info"]
-    )
-    return result
+
+@router.route("/users/message", methods=(HttpMethod.GET,))
+def get_message(*_):
+    return Response.ok({"message": "Hello World!"})

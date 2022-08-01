@@ -15,6 +15,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install pylint pytest
+        sed -i 's/..\/shared/shared/g' $(find ./* -name requirements.txt)
         pip install -r $(find ./* -name requirements.txt)
     - name: Analysing the code with pylint
       run: |

@@ -10,9 +10,6 @@ Globals:
     Timeout: 30
     Tracing: Active
 
-  Api:
-    TracingEnabled: true
-
 Description: >
   aw2-api-user-api
 
@@ -21,69 +18,51 @@ Description: >
 Parameters:
   EnvironmentName:
     Type: String
+  ApiHostedZoneId:
+    Type: String
 
 Resources:
+  UserHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders:
+          - authorization
+          - content-type
+        AllowMethods:
+          - OPTIONS
+          - GET
+          - POST
+          - PUT
+        AllowOrigins:
+          - https://www.ethanhollins.com
+          - https://ethanhollins.com
+          - https://www.algowolf.com
+          - https://algowolf.com
+      Domain:
+        DomainName: api.ethanhollins.com
+        CertificateArn: arn:aws:acm:ap-southeast-2:977407872120:certificate/32b3abe2-c186-4295-a08d-fce46bec311c
+        EndpointConfiguration: REGIONAL
+        Route53:
+          HostedZoneId: !Sub ${ApiHostedZoneId}
+          EvaluateTargetHealth: true
+      StageName: Dev
+
   UserApiFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: ../../user_api/
+      Events:
+        UserEvent:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref UserHttpApi
+            Method: ANY
+            Path: /users/{proxy+}
       Environment:
         Variables:
           COGNITO_APP_CLIENT_ID: 6ogk3o03rlqivg2jtmslve4eu3 # TODO: Retrieve from SSM
-
-  UserApiDataSourceServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service:
-                - appsync.amazonaws.com
-            Action:
-              - "sts:AssumeRole"
-      Policies: 
-        - PolicyName: !Sub ${EnvironmentName}-AppSyncInvokeLambda
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Action: "lambda:InvokeFunction"
-                Resource: !GetAtt UserApiFunction.Arn
-
-  UserApi:
-    Type: AWS::AppSync::GraphQLApi
-    Properties:
-      Name: !Sub ${EnvironmentName}-UserApi
-      AuthenticationType: AMAZON_COGNITO_USER_POOLS
-      UserPoolConfig:
-        AwsRegion: !Sub ${AWS::Region}
-        DefaultAction: ALLOW
-        UserPoolId: !Ref UserApiUserPool
-      AdditionalAuthenticationProviders:
-        - AuthenticationType: API_KEY
-      XrayEnabled: true
-
-  UserApiSchema:
-    Type: AWS::AppSync::GraphQLSchema
-    Properties:
-      ApiId: !GetAtt UserApi.ApiId
-      Definition: #exec tools/cfn-snippet-generator file-to-yaml-multiline ../user_api/schema.gql
-
-  UserApiDataSource:
-    Type: AWS::AppSync::DataSource
-    Properties:
-      ApiId: !GetAtt UserApi.ApiId
-      Type: AWS_LAMBDA
-      Name: !Join ["_", !Split ["-", !Sub "${EnvironmentName}-UserApiDataSource"]]
-      ServiceRoleArn: !GetAtt UserApiDataSourceServiceRole.Arn
-      Description: "Data source for User Api"
-      LambdaConfig:
-        LambdaFunctionArn: !GetAtt UserApiFunction.Arn
-
-  #exec tools/cfn-snippet-generator generate-graphql-resolver UserApi UserApiDataSource Query hello
-  #exec tools/cfn-snippet-generator generate-graphql-resolver UserApi UserApiDataSource Query login
 
   UserApiSmsRole:
     Type: AWS::IAM::Role
@@ -232,43 +211,3 @@ Resources:
         - email
         - family_name
         - given_name
-
-  # UserApiIdentityPool:
-  #   Type: AWS::Cognito::IdentityPool
-  #   Properties:
-  #     IdentityPoolName: !Sub ${EnvironmentName}-UserApiIdentityPool
-  #     AllowUnauthenticatedIdentities: true
-  #     CognitoIdentityProviders:
-  #       - ClientId: !Ref UserApiAppClient
-  #         ProviderName: !GetAtt UserApiUserPool.ProviderName
-
-  # UserApiIdentityPoolRoles:
-  #   Type: AWS::Cognito::IdentityPoolRoleAttachment
-  #   Properties:
-  #     IdentityPoolId: !Ref UserApiIdentityPool
-  #     Roles:
-  #       unauthenticated: !GetAtt UserApiUnAuthRole.Arn
-    
-  # UserApiUnAuthRole:
-  #   Type: AWS::IAM::Role
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: "2012-10-17"
-  #       Statement:
-  #         - Effect: "Allow"
-  #           Principal:
-  #             Federated: "cognito-identity.amazonaws.com"
-  #           Action:
-  #             - "sts:AssumeRoleWithWebIdentity"
-  #     Policies:
-  #       - PolicyName: !Sub ${EnvironmentName}-AppSyncCognitoPolicy
-  #         PolicyDocument:
-  #           Version: "2012-10-17"
-  #           Statement:
-  #             - Effect: Allow
-  #               Action:
-  #                 - appsync:GraphQL
-  #               Resource: 
-  #                 - !Join [ "", [ !GetAtt UserApi.Arn, "/types/Query/fields/hello" ] ]
-  #                 - !Join [ "", [ !GetAtt UserApi.Arn, "/types/Query/fields/login" ] ]
-                

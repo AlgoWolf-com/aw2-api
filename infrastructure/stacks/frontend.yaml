@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  aw2-api-frontend
+
+  Frontend for AlgoWolf v2
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+Resources:
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub ${EnvironmentName}-frontend # TODO
+
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Sub ${FrontendBucket}
+      PolicyDocument:
+        Version: '2008-10-17'
+        Statement:
+          - Effect: Allow
+            Action: s3:GetObject
+            Resource: !Sub ${FrontendBucket.Arn}/*
+            Principal: "*"
+
+  FrontEndCloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "AW2 CloudFront origin access identity"
+
+  FrontendCloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !GetAtt FrontendBucket.RegionalDomainName
+            Id: !GetAtt FrontendBucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${FrontEndCloudFrontOriginAccessIdentity}
+        Enabled: true
+        Aliases:
+          - ethanhollins.com
+          - www.ethanhollins.com
+        DefaultCacheBehavior:
+          AllowedMethods:
+            - HEAD
+            - DELETE
+            - POST
+            - GET
+            - OPTIONS
+            - PUT
+            - PATCH
+          CachedMethods:
+            - HEAD
+            - GET
+          CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # TODO
+          Compress: true
+          TargetOriginId: !GetAtt FrontendBucket.RegionalDomainName
+          ViewerProtocolPolicy: redirect-to-https
+        DefaultRootObject: index.html
+        HttpVersion: http2
+        PriceClass: PriceClass_All
+        ViewerCertificate:
+          AcmCertificateArn: arn:aws:acm:us-east-1:977407872120:certificate/cd73a2cb-9772-4b8a-91e4-2ae6ae3934ed #TODO
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+
+Outputs:
+  FrontendCloudFrontDistributionDomainName:
+    Value: !GetAtt FrontendCloudFrontDistribution.DomainName

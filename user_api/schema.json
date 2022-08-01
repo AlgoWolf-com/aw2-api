@@ -1,0 +1,75 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "$id": "http://example.com/root.json",
+  "type": "object",
+  "description": "An API Gateway Lambda Proxy event.",
+  "properties": {
+    "headers": {
+      "$id": "#/properties/headers",
+      "description": "Incoming request headers.",
+      "anyOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
+    },
+    "isBase64Encoded": {
+      "$id": "#/properties/isBase64Encoded",
+      "type": "boolean",
+      "description": "A boolean flag to indicate if the applicable request payload is Base64-encoded."
+    },
+    "pathParameters": {
+      "$id": "#/properties/pathParameters",
+      "description": "Path parameters.",
+      "anyOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
+    },
+    "rawPath": {
+      "$id": "#/properties/rawPath",
+      "type": "string",
+      "description": "Raw path parameter."
+    },
+    "rawQueryString": {
+      "$id": "#/properties/rawQueryString",
+      "type": "string",
+      "description": "Raw query string parameter."
+    },
+    "requestContext": {
+      "$id": "#/properties/requestContext",
+      "description": "Request context, including authorizer-returned key-value pairs.",
+      "anyOf": [
+        { "type": "object" },
+        { "type": "null" }
+      ]
+    },
+    "routeKey": {
+      "$id": "#/properties/routeKey",
+      "type": "string",
+      "description": "Route key parameter."
+    },
+    "version": {
+      "$id": "#/properties/version",
+      "type": "string",
+      "description": "Version parameter."
+    },
+    "body": {
+      "$id": "#/properties/body",
+      "description": "A JSON string of the request payload.",
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "required": [
+    "headers",
+    "isBase64Encoded",
+    "pathParameters",
+    "rawPath",
+    "rawQueryString",
+    "requestContext",
+    "routeKey",
+    "version"
+  ]
+}
