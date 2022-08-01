@@ -1,5 +1,6 @@
 import setuptools
 
+
 setuptools.setup(
     name="aw2-api",
     version="0.0.1",

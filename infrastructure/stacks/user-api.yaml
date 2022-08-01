@@ -3,12 +3,24 @@ Transform: AWS::Serverless-2016-10-31
 
 Globals:
   Function:
-    Handler: function.handler
-    Runtime: python3.9
     Architectures:
       - x86_64
     Timeout: 30
     Tracing: Active
+    VpcConfig:
+      SecurityGroupIds:
+        - sg-0992febe102547325 # TODO
+      SubnetIds:
+        - subnet-070f0d377a864f396 # TODO
+        - subnet-01484b4b177c7e7c9 # TODO
+    Tags:
+      Owner: "Ethan Hollins"
+      Environment: !Sub ${EnvironmentName}
+  
+  HttpApi:
+    Tags:
+      Owner: "Ethan Hollins"
+      Environment: !Sub ${EnvironmentName}
 
 Description: >
   aw2-api-user-api
@@ -52,7 +64,7 @@ Resources:
   UserApiFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: ../../user_api/
+      PackageType: Image
       Events:
         UserEvent:
           Type: HttpApi
@@ -63,6 +75,9 @@ Resources:
       Environment:
         Variables:
           COGNITO_APP_CLIENT_ID: 6ogk3o03rlqivg2jtmslve4eu3 # TODO: Retrieve from SSM
+    Metadata:
+      DockerContext: ../../
+      Dockerfile: ./user_api/Dockerfile
 
   UserApiSmsRole:
     Type: AWS::IAM::Role
@@ -168,6 +183,9 @@ Resources:
         EmailMessage: 'Your verification code is {####}. '
         EmailSubject: Your verification code
         SmsMessage: 'Your verification code is {####}. '
+      UserPoolTags:
+        Owner: "Ethan Hollins"
+        Environment: !Sub ${EnvironmentName}
 
   UserApiAdminGroup:
     Type: AWS::Cognito::UserPoolGroup

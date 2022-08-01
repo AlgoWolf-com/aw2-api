@@ -8,7 +8,8 @@ s3_prefix = "aw2-dev"
 region = "ap-southeast-2"
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
-image_repositories = []
+parameter_overrides = "EnvironmentName=\"aw2-dev\""
+
 
 [aw2-prod]
 [aw2-prod.deploy]

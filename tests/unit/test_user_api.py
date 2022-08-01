@@ -1,4 +1,4 @@
-# pylint: disable=redefined-outer-name,import-outside-toplevel
+# pylint: disable=redefined-outer-name,import-outside-toplevel,too-few-public-methods
 import os
 import json
 from unittest import mock

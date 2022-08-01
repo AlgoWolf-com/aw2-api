@@ -14,8 +14,7 @@ deploy-%: build-%
 	@cd ..; sam deploy \
 		--config-env $(ENV_NAME) \
 		--region $(AWS_REGION) \
-		--parameter-overrides \
-			EnvironmentName=$(ENV_NAME)
+		--resolve-image-repos
 
 .PHONY: build
 build-%: %.yaml $(GENERATED_FILES)
