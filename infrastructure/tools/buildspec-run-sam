@@ -1,0 +1,9 @@
+#!/bin/bash -eu
+if [[ "${ENVIRONMENT_NAME-}" == "aw2-dev" ]]; then
+    invoke dev.deploy --clean
+elif [[ "${ENVIRONMENT_NAME-}" == "aw2-prod" ]]; then
+    invoke prod.deploy --clean
+else
+    printf '%s\n' "Unexpected environment name" >&2
+    exit 1
+fi

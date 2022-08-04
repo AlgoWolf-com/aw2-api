@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
+def _get_path(request_ctx: Dict) -> str:
+    path = request_ctx["http"]["path"]
+    stage = request_ctx["stage"]
+    if stage != "$default":
+        path = path.replace(f"/{stage}", "")
+    return path
+
+
 class Router:
     server_name = None
     script_name = "/"
@@ -28,13 +36,6 @@ class Router:
             script_name=self.script_name,
             url_scheme=self.url_scheme,
         )
-
-    def _get_path(self, request_ctx: Dict) -> str:
-        path = request_ctx["http"]["path"]
-        stage = request_ctx["stage"]
-        if stage != "$default":
-            path = path.replace(f"/{stage}", "")
-        return path
 
     def add_url_rule(self, rule: str, view_func: Callable, **options: Dict) -> None:
         endpoint = options.get("endpoint") or view_func.__name__
@@ -74,7 +75,7 @@ class Router:
             self._bind_router(request)
 
         request_ctx = request["requestContext"]
-        path = self._get_path(request_ctx)
+        path = _get_path(request_ctx)
         logger.debug("Matching %s %s", request_ctx["http"]["method"], path)
         endpoint, args = self._router.match(path, request_ctx["http"]["method"])
 

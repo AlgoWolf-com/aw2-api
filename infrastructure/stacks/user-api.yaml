@@ -33,6 +33,9 @@ Parameters:
   ApiHostedZoneId:
     Type: String
 
+Conditions:
+  IsProd: !Equals [!Ref EnvironmentName, aw2-prod]
+
 Resources:
   UserHttpApi:
     Type: AWS::Serverless::HttpApi
@@ -75,6 +78,12 @@ Resources:
       Environment:
         Variables:
           COGNITO_APP_CLIENT_ID: 6ogk3o03rlqivg2jtmslve4eu3 # TODO: Retrieve from SSM
+      AutoPublishAlias: live
+      DeploymentPreference:
+        Type: !If
+          - IsProd
+          - Linear10PercentEvery1Minute
+          - AllAtOnce
     Metadata:
       DockerContext: ../../
       Dockerfile: ./user_api/Dockerfile

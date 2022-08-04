@@ -1,0 +1,29 @@
+version: 0.2
+phases:
+  install:
+    runtime-version:
+      python: 3.9
+    commands:
+      - pip3 install pylint pytest invoke shared/
+      # - sudo apt-get install -y gpp
+      # - sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+      # - sudo chmod a+x /usr/local/bin/yq
+  build:
+    commands:
+      - pylint $(find ./* -type f -name "*.py")
+      - python -m pytest -c pytest.ini --junitxml tests/reports/build-pytest-report.xml
+      - chmod +x infrastructure/tools/buildspec-run-sam
+      - infrastructure/tools/buildspec-run-sam
+  post_build:
+    commands:
+      - echo Executing Post Build Phase
+reports:
+  pytest_reports:
+    files:
+      - reports/build-pytest-report.xml
+    base-directory: tests/
+    file-format: JUNITXML
+artifacts:
+  files:
+    - "**/*"
+  name: aw2-build-artifacts
