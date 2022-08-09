@@ -1,0 +1,12 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  aw2-api
+
+  AlgoWolf v2 global resources
+
+Resources:
+  ApiHostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: ethanhollins.com

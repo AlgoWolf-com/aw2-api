@@ -8,27 +8,38 @@ Description: >
 Parameters:
   EnvironmentName:
     Type: String
+  RepositoryBranch:
+    Type: String
 
 Conditions:
   IsProd: !Equals [!Ref EnvironmentName, aw2-prod]
+  IsStage: !Equals [!Ref EnvironmentName, aw2-staging]
 
 Resources:
   FrontendStack:
     Type: AWS::Serverless::Application
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       Location: stacks/frontend.yaml
       Parameters:
         EnvironmentName: !Sub ${EnvironmentName}
 
-  ApiHostedZone:
-    Type: AWS::Route53::HostedZone
+  UserApiStack:
+    Type: AWS::Serverless::Application
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
-      Name: ethanhollins.com
+      Location: stacks/user-api.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+        ApiHostedZoneId: Z0434047RQEXFDWYFBU6
 
-  ApiRecordSetGroup:
+  ApiRecordSetGroupProd:
     Type: AWS::Route53::RecordSetGroup
+    Condition: IsProd
     Properties:
-      HostedZoneId: !Ref ApiHostedZone
+      HostedZoneId: Z0434047RQEXFDWYFBU6
       RecordSets:
         - AliasTarget:
             DNSName: !Sub ${FrontendStack.Outputs.FrontendCloudFrontDistributionDomainName}
@@ -42,251 +53,28 @@ Resources:
             HostedZoneId: Z2FDTNDATAQYW2
           Name: ethanhollins.com
           Type: A
+        - AliasTarget:
+            DNSName: !Sub ${UserApiStack.Outputs.UserHttpApiDomainNameRegionalDomainName}
+            EvaluateTargetHealth: true
+            HostedZoneId: Z2RPCDW04V8134
+          Name: !Sub ${UserApiStack.Outputs.UserHttpApiDomainName}
+          Type: A
 
-  ApiCodePipelineBucket:
-    Type: AWS::S3::Bucket
+  ApiRecordSetGroupStage:
+    Type: AWS::Route53::RecordSetGroup
+    Condition: IsStage
     Properties:
-      BucketName: !Sub ${EnvironmentName}-codepipeline-${AWS::Region}
-      Tags:
-        - Key: Owner
-          Value: "Ethan Hollins"
-        - Key: Environment
-          Value: !Sub ${EnvironmentName}
-
-  ApiCodePipelineBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref ApiCodePipelineBucket
-      PolicyDocument:
-        Version: "2012-10-17"
-        Id: SSEAndSSLPolicy
-        Statement:
-          - Sid: DenyUnEncryptedObjectUploads
-            Effect: Deny
-            Principal: "*"
-            Action: "s3:PutObject"
-            Resource: !Sub "arn:aws:s3:::${ApiCodePipelineBucket}/*"
-            Condition:
-              StringNotEquals:
-                "s3:x-amz-server-side-encryption": "aws:kms"
-          - Sid: DenyInsecureConnections
-            Effect: Deny
-            Principal: "*"
-            Action: "s3:*"
-            Resource: !Sub "arn:aws:s3:::${ApiCodePipelineBucket}/*"
-            Condition:
-              Bool:
-                "aws:SecureTransport": false
-      
-  ApiCodePipelineServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      AssumeRolePolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal:
-              AWS: "arn:aws:iam::977407872120:user/ethan"
-              Service: codepipeline.amazonaws.com
-            Action: "sts:AssumeRole"
-      Policies:
-        - PolicyName: !Sub ${EnvironmentName}-pipeline-CodePipelineServiceRole
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "iam:PassRole"
-                Condition:
-                  StringEqualsIfExists:
-                    "iam:PassedToService":
-                      - "cloudformation.amazonaws.com"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "codestar-connections:UseConnection"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "cloudwatch:*"
-                  - "s3:*"
-                  - "cloudformation:*"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "lambda:InvokeFunction"
-                  - "lambda:ListFunctions"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "cloudformation:CreateStack"
-                  - "cloudformation:DeleteStack"
-                  - "cloudformation:DescribeStack"
-                  - "cloudformation:UpdateStack"
-                  - "cloudformation:CreateChangeSet"
-                  - "cloudformation:DeleteChangeSet"
-                  - "cloudformation:DescribeChangeSet"
-                  - "cloudformation:ExecuteChangeSet"
-                  - "cloudformation:SetStackPolicy"
-                  - "cloudformation:ValidateTemplate"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "codebuild:BatchGetBuilds"
-                  - "codebuild:StartBuild"
-                  - "codebuild:BatchGetBuildBatches"
-                  - "codebuild:StartBuildBatch"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "ecr:DescribeImages"
-      Tags:
-        - Key: Owner
-          Value: "Ethan Hollins"
-        - Key: Environment
-          Value: !Sub ${EnvironmentName}
-
-  ApiCodePipeline:
-    Type: AWS::CodePipeline::Pipeline
-    Properties:
-      Name: !Sub ${EnvironmentName}-pipeline
-      ArtifactStore:
-        Type: S3
-        Location: !Ref ApiCodePipelineBucket
-      RoleArn: !GetAtt ApiCodePipelineServiceRole.Arn
-      Stages:
-        - Name: Source
-          Actions:
-            - Name: Source
-              ActionTypeId:
-                Category: Source
-                Owner: AWS
-                Provider: CodeStarSourceConnection
-                Version: 1
-              RunOrder: 1
-              Configuration:
-                BranchName: !If
-                  - IsProd
-                  - production
-                  - master
-                ConnectionArn: arn:aws:codestar-connections:ap-southeast-2:977407872120:connection/6239809d-7746-40e6-adde-5c67f1bae059
-                FullRepositoryId: AlgoWolf-com/aw2-api
-                OutputArtifactFormat: CODE_ZIP
-              OutputArtifacts:
-                - Name: SourceArtifact
-              Region: !Sub ${AWS::Region}
-              Namespace: SourceVariables
-        - Name: Build
-          Actions:
-            - Name: Build
-              ActionTypeId:
-                Category: Build
-                Owner: AWS
-                Provider: CodeBuild
-                Version: 1
-              RunOrder: 1
-              Configuration:
-                ProjectName: !Ref ApiCodeBuildProject
-              OutputArtifacts:
-                - Name: BuildArtifact
-              InputArtifacts:
-                - Name: SourceArtifact
-              Region: !Sub ${AWS::Region}
-              Namespace: BuildVariables
-      Tags:
-        - Key: Owner
-          Value: "Ethan Hollins"
-        - Key: Environment
-          Value: !Sub ${EnvironmentName}
-
-  ApiCodeBuildServiceRole:
-    Type: AWS::IAM::Role
-    Properties:
-      Path: /
-      Description: CodeBuild service role
-      AssumeRolePolicyDocument: 
-        Version: "2012-10-17"
-        Statement:
-          - Effect: Allow
-            Principal: 
-              Service: codebuild.amazonaws.com
-            Action: "sts:AssumeRole"
-      Policies:
-        - PolicyName: !Sub ${EnvironmentName}-api-CodeBuildServiceRole
-          PolicyDocument:
-            Version: "2012-10-17"
-            Statement:
-              - Effect: Allow
-                Resource:
-                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${EnvironmentName}-api"
-                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${EnvironmentName}-api:*"
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
-                  - "logs:PutLogEvents"
-              - Effect: Allow
-                Resource: !Join
-                  - ""
-                  - - !GetAtt ApiCodePipelineBucket.Arn
-                    - "/*"
-                Action:
-                  - "s3:PutObject"
-                  - "s3:GetObject"
-                  - "s3:GetObjectVersion"
-                  - "s3:GetObjectAcl"
-                  - "s3:GetBucketLocation"
-              - Effect: Allow
-                Resource:
-                  - !Sub "arn:aws:codebuild:${AWS::Region}:${AWS::AccountId}:report-group/${EnvironmentName}-api-*"
-                Action:
-                  - "codebuild:CreateReportGroup"
-                  - "codebuild:CreateReport"
-                  - "codebuild:UpdateReport"
-                  - "codebuild:BatchPutTestCases"
-                  - "codebuild:BatchPutCodeCoverages"
-      Tags:
-        - Key: Owner
-          Value: "Ethan Hollins"
-        - Key: Environment
-          Value: !Sub ${EnvironmentName}
-
-  ApiCodeBuildProject:
-    Type: AWS::CodeBuild::Project
-    Properties:
-      Name: !Sub ${EnvironmentName}-api
-      ServiceRole: !GetAtt ApiCodeBuildServiceRole.Arn
-      Artifacts:
-        Type: CODEPIPELINE
-      Environment:
-        ComputeType: BUILD_GENERAL1_SMALL
-        Image: "aws/codebuild/standard:6.0"
-        PrivilegedMode: true
-        Type: LINUX_CONTAINER
-        EnvironmentVariables:
-          - Name: ENVIRONMENT_NAME
-            Type: PLAINTEXT
-            Value: !Sub ${EnvironmentName}
-      Source:
-        BuildSpec: buildspec.yaml
-        Type: CODEPIPELINE
-      # VpcConfig:
-      #   SecurityGroupIds:
-      #     - sg-0992febe102547325 # TODO
-      #   SubnetIds:
-      #     - subnet-070f0d377a864f396 # TODO
-      #     - subnet-01484b4b177c7e7c9 # TODO
-      Tags:
-        - Key: Owner
-          Value: "Ethan Hollins"
-        - Key: Environment
-          Value: !Sub ${EnvironmentName}
-
-  UserApiStack:
-    Type: AWS::Serverless::Application
-    Properties:
-      Location: stacks/user-api.yaml
-      Parameters:
-        EnvironmentName: !Ref EnvironmentName
-        ApiHostedZoneId: !Ref ApiHostedZone
+      HostedZoneId: Z0434047RQEXFDWYFBU6
+      RecordSets:
+        - AliasTarget:
+            DNSName: !Sub ${FrontendStack.Outputs.FrontendCloudFrontDistributionDomainName}
+            EvaluateTargetHealth: false
+            HostedZoneId: Z2FDTNDATAQYW2
+          Name: sandbox.ethanhollins.com
+          Type: A
+        - AliasTarget:
+            DNSName: !Sub ${UserApiStack.Outputs.UserHttpApiDomainNameRegionalDomainName}
+            EvaluateTargetHealth: true
+            HostedZoneId: Z2RPCDW04V8134
+          Name: !Sub ${UserApiStack.Outputs.UserHttpApiDomainName}
+          Type: A

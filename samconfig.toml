@@ -10,6 +10,17 @@ confirm_changeset = false
 capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
 parameter_overrides = "EnvironmentName=\"aw2-dev\""
 
+[aw2-dev-dependencies]
+[aw2-dev-dependencies.deploy]
+[aw2-dev-dependencies.deploy.parameters]
+stack_name = "aw2-dev-dependencies"
+s3_bucket = "aws-sam-977407872120"
+s3_prefix = "aw2-dev-dependencies"
+region = "ap-southeast-2"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM CAPABILITY_AUTO_EXPAND"
+parameter_overrides = "EnvironmentName=\"aw2-dev\""
+
 
 [aw2-prod]
 [aw2-prod.deploy]

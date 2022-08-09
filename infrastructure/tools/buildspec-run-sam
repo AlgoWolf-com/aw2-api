@@ -1,8 +1,15 @@
 #!/bin/bash -eu
-if [[ "${ENVIRONMENT_NAME-}" == "aw2-dev" ]]; then
-    invoke dev.deploy --clean
+if [[ "${ENVIRONMENT_NAME-}" == "aw2-staging" ]]; then
+    invoke staging.deploy
 elif [[ "${ENVIRONMENT_NAME-}" == "aw2-prod" ]]; then
-    invoke prod.deploy --clean
+    invoke prod.deploy
+elif [[ "${ENVIRONMENT_NAME-}" == aw2-dev* ]]; then
+    if [[ -n "${REPOSITORY_BRANCH-}" ]]; then
+        invoke dev.deploy --feature-name ${REPOSITORY_BRANCH-}
+    else
+        printf '%s\n' "Feature branch name must be specified" >&2
+        exit 1
+    fi
 else
     printf '%s\n' "Unexpected environment name" >&2
     exit 1

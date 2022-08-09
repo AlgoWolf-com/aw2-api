@@ -1,6 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-
 Description: >
   aw2-api-frontend
 
@@ -9,6 +8,10 @@ Description: >
 Parameters:
   EnvironmentName:
     Type: String
+
+Conditions:
+  IsProd: !Equals [!Ref EnvironmentName, aw2-prod]
+  IsStaging: !Equals [!Ref EnvironmentName, aw2-staging]
 
 Resources:
   FrontendBucket:
@@ -21,7 +24,7 @@ Resources:
     Properties:
       Bucket: !Sub ${FrontendBucket}
       PolicyDocument:
-        Version: '2008-10-17'
+        Version: '2012-10-17'
         Statement:
           - Effect: Allow
             Action: s3:GetObject
@@ -44,9 +47,15 @@ Resources:
             S3OriginConfig:
               OriginAccessIdentity: !Sub origin-access-identity/cloudfront/${FrontEndCloudFrontOriginAccessIdentity}
         Enabled: true
-        Aliases:
-          - ethanhollins.com
-          - www.ethanhollins.com
+        Aliases: 
+          Fn::If:
+            - IsProd
+            - - ethanhollins.com
+              - www.ethanhollins.com
+            - Fn::If:
+              - IsStaging
+              - - sandbox.ethanhollins.com
+              - - Ref: "AWS::NoValue" # Else environment `dev`
         DefaultCacheBehavior:
           AllowedMethods:
             - HEAD
@@ -67,9 +76,17 @@ Resources:
         HttpVersion: http2
         PriceClass: PriceClass_All
         ViewerCertificate:
-          AcmCertificateArn: arn:aws:acm:us-east-1:977407872120:certificate/cd73a2cb-9772-4b8a-91e4-2ae6ae3934ed #TODO
-          MinimumProtocolVersion: TLSv1.2_2021
-          SslSupportMethod: sni-only
+          Fn::If:
+            - IsProd
+            - AcmCertificateArn: arn:aws:acm:us-east-1:977407872120:certificate/cd73a2cb-9772-4b8a-91e4-2ae6ae3934ed #TODO
+              MinimumProtocolVersion: TLSv1.2_2021
+              SslSupportMethod: sni-only
+            - Fn::If:
+              - IsStaging
+              - AcmCertificateArn: arn:aws:acm:us-east-1:977407872120:certificate/e2644f3e-31e4-4cae-9cf5-da8e360bc9e5 #TODO
+                MinimumProtocolVersion: TLSv1.2_2021
+                SslSupportMethod: sni-only
+              - Ref: "AWS::NoValue" # Else environment `dev`
 
 Outputs:
   FrontendCloudFrontDistributionDomainName:

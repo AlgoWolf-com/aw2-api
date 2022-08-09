@@ -35,10 +35,30 @@ Parameters:
 
 Conditions:
   IsProd: !Equals [!Ref EnvironmentName, aw2-prod]
+  IsStaging: !Equals [!Ref EnvironmentName, aw2-staging]
+  IsProdOrStaging: !Or [Condition: IsProd, Condition: IsStaging]
 
 Resources:
+  UserHttpApiDomainName:
+    Type: AWS::ApiGatewayV2::DomainName
+    Condition: IsProdOrStaging
+    Properties:
+      DomainName: 
+        Fn::If:
+          - IsProd
+          - api.ethanhollins.com
+          - sandbox-api.ethanhollins.com
+      DomainNameConfigurations:
+        - CertificateArn: 
+            Fn::If:
+              - IsProd
+              - "arn:aws:acm:ap-southeast-2:977407872120:certificate/32b3abe2-c186-4295-a08d-fce46bec311c"
+              - "arn:aws:acm:ap-southeast-2:977407872120:certificate/9f700aba-aef7-4345-b761-3a2ff2af06a0"
+          EndpointType: REGIONAL
+
   UserHttpApi:
     Type: AWS::Serverless::HttpApi
+    Condition: IsProdOrStaging
     Properties:
       CorsConfiguration:
         AllowCredentials: false
@@ -53,23 +73,40 @@ Resources:
         AllowOrigins:
           - https://www.ethanhollins.com
           - https://ethanhollins.com
+          - https://sandbox.ethanhollins.com
           - https://www.algowolf.com
           - https://algowolf.com
-      Domain:
-        DomainName: api.ethanhollins.com
-        CertificateArn: arn:aws:acm:ap-southeast-2:977407872120:certificate/32b3abe2-c186-4295-a08d-fce46bec311c
-        EndpointConfiguration: REGIONAL
-        Route53:
-          HostedZoneId: !Sub ${ApiHostedZoneId}
-          EvaluateTargetHealth: true
-      StageName: Dev
+      StageName: 
+        Fn::If:
+          - IsProd
+          - Prod
+          - Fn::If:
+            - IsStaging
+            - Staging
+            - Dev
+
+  UserHttpApiMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    Condition: IsProdOrStaging
+    Properties:
+      DomainName: !Ref UserHttpApiDomainName
+      Stage:
+        Fn::If:
+          - IsProd
+          - Prod
+          - Fn::If:
+            - IsStaging
+            - Staging
+            - Dev
+      ApiId: !Ref UserHttpApi
 
   UserApiFunction:
     Type: AWS::Serverless::Function
+    Condition: IsProdOrStaging
     Properties:
       PackageType: Image
-      Events:
-        UserEvent:
+      Events: 
+        UserEvent: 
           Type: HttpApi
           Properties:
             ApiId: !Ref UserHttpApi
@@ -114,6 +151,8 @@ Resources:
 
   UserApiUserPool:
     Type: AWS::Cognito::UserPool
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
     Properties:
       AccountRecoverySetting:
         RecoveryMechanisms:
@@ -238,3 +277,11 @@ Resources:
         - email
         - family_name
         - given_name
+
+Outputs:
+  UserHttpApiDomainName:
+    Condition: IsProdOrStaging
+    Value: !Ref UserHttpApiDomainName
+  UserHttpApiDomainNameRegionalDomainName:
+    Condition: IsProdOrStaging
+    Value: !GetAtt UserHttpApiDomainName.RegionalDomainName
