@@ -276,6 +276,80 @@ Resources:
         - family_name
         - given_name
 
+  UserApiUserTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # Condition: IsProdOrStaging
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+      TableName: !Sub ${EnvironmentName}-user-table
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
+  UserApiConnectionTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # Condition: IsProdOrStaging
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: connection_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connection_id 
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: !Sub ${EnvironmentName}-connection-table
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
+  UserApiStrategyTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # Condition: IsProdOrStaging
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: strategy_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: strategy_id 
+          KeyType: HASH
+        - AttributeName: user_id
+          KeyType: RANGE
+      TableName: !Sub ${EnvironmentName}-strategy-table
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
 Outputs:
   UserHttpApiDomainName:
     Condition: IsProdOrStaging

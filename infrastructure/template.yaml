@@ -35,6 +35,15 @@ Resources:
         EnvironmentName: !Ref EnvironmentName
         ApiHostedZoneId: Z0434047RQEXFDWYFBU6
 
+  TradeWsApiStack:
+    Type: AWS::Serverless::Application
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      Location: stacks/trade-ws-api.yaml
+      Parameters:
+        EnvironmentName: !Ref EnvironmentName
+
   ApiRecordSetGroupProd:
     Type: AWS::Route53::RecordSetGroup
     Condition: IsProd

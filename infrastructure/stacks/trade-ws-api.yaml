@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Architectures:
+      - x86_64
+    Timeout: 30
+    Tracing: Active
+    Tags:
+      Owner: "Ethan Hollins"
+      Environment: !Sub ${EnvironmentName}
+
+Description: >
+  aw2-api-user-api
+
+  Trade websocket api for AlgoWolf v2
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+Resources:
+  TradeWsApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub ${EnvironmentName}-TradeWsApi
+      ProtocolType: WEBSOCKET
+      CorsConfiguration:
+        AllowCredentials: false
+        AllowHeaders:
+          - authorization
+          - content-type
+        AllowMethods:
+          - OPTIONS
+          - GET
+          - POST
+          - PUT
+        AllowOrigins:
+          - https://www.ethanhollins.com
+          - https://ethanhollins.com
+          - https://sandbox.ethanhollins.com
+          - https://www.algowolf.com
+          - https://algowolf.com
+      RouteSelectionExpression: "$request.body.action"
