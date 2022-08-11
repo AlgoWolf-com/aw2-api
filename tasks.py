@@ -21,7 +21,7 @@ def deploy(ctx, feature_name=""):
         if not feature_name:
             raise AssertionError("dev environment must have feature_name")
         stack_name += f"-{feature_name}"
-        env_name += f"-{feature_name}"
+        env_name = f"{env_name}-{feature_name}".lower()
         repository_branch = feature_name
     else:
         if feature_name:
@@ -57,7 +57,7 @@ def dependencies_deploy(ctx, feature_name=""):
         if not feature_name:
             raise AssertionError("dev environment must have feature_name")
         stack_name += f"-{feature_name}"
-        env_name += f"-{feature_name}"
+        env_name = f"{env_name}-{feature_name}".lower()
         repository_branch = feature_name
     else:
         if feature_name:
