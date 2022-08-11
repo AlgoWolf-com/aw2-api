@@ -58,7 +58,6 @@ Resources:
 
   UserHttpApi:
     Type: AWS::Serverless::HttpApi
-    Condition: IsProdOrStaging
     Properties:
       CorsConfiguration:
         AllowCredentials: false
@@ -102,7 +101,6 @@ Resources:
 
   UserApiFunction:
     Type: AWS::Serverless::Function
-    Condition: IsProdOrStaging
     Properties:
       PackageType: Image
       Events: 
