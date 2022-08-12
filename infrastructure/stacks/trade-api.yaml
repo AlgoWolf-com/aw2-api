@@ -1,0 +1,315 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Globals:
+  Function:
+    Architectures:
+      - x86_64
+    Timeout: 30
+    DeploymentPreference:
+      Type: !If
+        - IsProd
+        - Linear10PercentEvery1Minute
+        - AllAtOnce
+    Tracing: Active
+    Tags:
+      Owner: "Ethan Hollins"
+      Environment: !Sub ${EnvironmentName}
+
+Description: >
+  aw2-api-user-api
+
+  Trade websocket api for AlgoWolf v2
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+Conditions:
+  IsProd: !Equals [!Ref EnvironmentName, aw2-prod]
+
+Resources:
+  TradeApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: !Sub ${EnvironmentName}-TradeApi
+      ProtocolType: WEBSOCKET
+      RouteSelectionExpression: "$request.body.action"
+
+  TradeApiConnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteKey: $connect
+      AuthorizationType: NONE
+      OperationName: ConnectRoute
+      Target: !Sub integrations/${TradeApiConnectIntegration}
+
+  TradeApiDisconnectRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteKey: $disconnect
+      AuthorizationType: NONE
+      Target: !Sub integrations/${TradeApiDisconnectIntegration}
+
+  TradeApiTradeRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteKey: trade
+      AuthorizationType: NONE
+      Target: !Sub integrations/${TradeApiTradeIntegration}
+
+  TradeApiPingRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteKey: ping
+      AuthorizationType: NONE
+      RouteResponseSelectionExpression: $default
+      Target: !Sub integrations/${TradeApiPingIntegration}
+
+  TradeApiPingRouteResponse:
+    Type: AWS::ApiGatewayV2::RouteResponse
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteId: !Ref TradeApiPingRoute
+      RouteResponseKey: $default
+
+  TradeApiConnectIntegrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiConnectIntegrationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !GetAtt TradeApiConnectFunction.Arn
+                Action:
+                  - "lambda:InvokeFunction"
+
+  TradeApiConnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TradeApi
+      CredentialsArn: !GetAtt TradeApiConnectIntegrationRole.Arn
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TradeApiConnectFunction.Arn}/invocations
+
+  TradeApiDisconnectIntegrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiDisconnectIntegrationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !GetAtt TradeApiDisconnectFunction.Arn
+                Action:
+                  - "lambda:InvokeFunction"
+
+  TradeApiDisconnectIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TradeApi
+      CredentialsArn: !GetAtt TradeApiDisconnectIntegrationRole.Arn
+      IntegrationType: AWS_PROXY
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${TradeApiDisconnectFunction.Arn}/invocations
+
+  TradeApiTradeIntegrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiTradeIntegrationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Ref TradeApiTradeStateMachine
+                Action:
+                  - "states:StartExecution"
+
+  TradeApiTradeIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TradeApi
+      CredentialsArn: !GetAtt TradeApiTradeIntegrationRole.Arn
+      IntegrationType: AWS
+      IntegrationMethod: POST
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:states:action/StartExecution
+      RequestTemplates: 
+        "application/json": !Sub
+          - |
+              {
+                "input": "$util.escapeJavaScript($input.json('$'))",
+                "stateMachineArn": "${arn}"
+              }
+          - arn: !Ref TradeApiTradeStateMachine
+
+  TradeApiPingIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TradeApi
+      IntegrationType: MOCK
+      RequestTemplates: 
+        "application/json": |
+          {
+            "statusCode": 200
+          }
+    
+  TradeApiPingIntegrationResponse:
+    Type: AWS::ApiGatewayV2::IntegrationResponse
+    Properties:
+      ApiId: !Ref TradeApi
+      IntegrationId: !Ref TradeApiPingIntegration
+      IntegrationResponseKey: /200/
+      ResponseTemplates: 
+        "application/json": |
+          {
+            "statusCode": 200,
+            "body": "{\"message\": \"pong!\"}"
+          }
+
+  TradeApiDeployment:
+    Type: AWS::ApiGatewayV2::Deployment
+    DependsOn:
+      - TradeApiConnectRoute
+      - TradeApiDisconnectRoute
+      - TradeApiTradeRoute
+    Properties:
+      ApiId: !Ref TradeApi
+
+  TradeApiStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref TradeApi
+      StageName: Dev # TODO
+      DeploymentId: !Ref TradeApiDeployment
+      AutoDeploy: true
+
+  TradeApiTradeStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiTradeStateMachinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-strategy-table"
+                Action:
+                  - "dynamodb:GetItem"
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - "logs:CreateLogDelivery"
+                  - "logs:GetLogDelivery"
+                  - "logs:UpdateLogDelivery"
+                  - "logs:DeleteLogDelivery"
+                  - "logs:ListLogDeliveries"
+                  - "logs:PutResourcePolicy"
+                  - "logs:DescribeResourcePolicies"
+                  - "logs:DescribeLogGroups"
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - "xray:PutTraceSegments"
+                  - "xray:PutTelemetryRecords"
+                  - "xray:GetSamplingRules"
+                  - "xray:GetSamplingTargets"
+
+  TradeApiTradeStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: /aws/states/TradeApiTradeStateMachine-Logs
+      RetentionInDays: 365
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
+  TradeApiTradeStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Role: !GetAtt TradeApiTradeStateMachineRole.Arn
+      Type: EXPRESS
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt TradeApiTradeStateMachineLogGroup.Arn
+      Tracing: 
+        Enabled: true
+      Tags:
+        Owner: "Ethan Hollins"
+        Environment: !Sub ${EnvironmentName}
+      Definition:
+        Comment: Push trade execute request to strategy subscribers
+        StartAt: RetrieveSubscribers
+        States:
+          RetrieveSubscribers:
+            Type: Task
+            Resource: "arn:aws:states:::dynamodb:getItem"
+            Parameters:
+              TableName: !Sub ${EnvironmentName}-strategy-table
+              Key:
+                strategy_id: 
+                  S: "s-1"
+            End: true
+
+  TradeApiConnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      AutoPublishAlias: live
+    Metadata:
+      DockerContext: ../../
+      Dockerfile: ./trade_api/connect/Dockerfile
+
+  TradeApiDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      AutoPublishAlias: live
+    Metadata:
+      DockerContext: ../../
+      Dockerfile: ./trade_api/connect/Dockerfile

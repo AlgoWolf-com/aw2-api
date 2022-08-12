@@ -60,7 +60,7 @@ Resources:
               Service: codepipeline.amazonaws.com
             Action: "sts:AssumeRole"
       Policies:
-        - PolicyName: !Sub ${EnvironmentName}-pipeline-CodePipelineServiceRole
+        - PolicyName: !Sub ${EnvironmentName}-pipeline-CodePipelineServicePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -180,7 +180,7 @@ Resources:
               Service: codebuild.amazonaws.com
             Action: "sts:AssumeRole"
       Policies:
-        - PolicyName: !Sub ${EnvironmentName}-api-CodeBuildServiceRole
+        - PolicyName: !Sub ${EnvironmentName}-api-CodeBuildServicePolicy
           PolicyDocument:
             Version: "2012-10-17"
             Statement:
@@ -259,7 +259,6 @@ Resources:
     Properties:
       Name: !Sub ${EnvironmentName}-api
       ServiceRole: !GetAtt ApiCodeBuildServiceRole.Arn
-      # ServiceRole: "arn:aws:iam::977407872120:role/aw2-dev-ApiCodeBuildServiceRole"
       Artifacts:
         Type: CODEPIPELINE
       Environment:

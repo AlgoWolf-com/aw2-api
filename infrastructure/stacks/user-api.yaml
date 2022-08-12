@@ -312,12 +312,20 @@ Resources:
       KeySchema:
         - AttributeName: connection_id 
           KeyType: HASH
-        - AttributeName: user_id
-          KeyType: RANGE
       TableName: !Sub ${EnvironmentName}-connection-table
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: !Sub ${EnvironmentName}-connection-table-gsi-user-id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection: 
+            ProjectionType: "KEYS_ONLY"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
       Tags:
         - Key: Owner
           Value: "Ethan Hollins"
@@ -338,12 +346,20 @@ Resources:
       KeySchema:
         - AttributeName: strategy_id 
           KeyType: HASH
-        - AttributeName: user_id
-          KeyType: RANGE
       TableName: !Sub ${EnvironmentName}-strategy-table
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: !Sub ${EnvironmentName}-strategy-table-gsi-user-id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection: 
+            ProjectionType: "KEYS_ONLY"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
       Tags:
         - Key: Owner
           Value: "Ethan Hollins"

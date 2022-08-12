@@ -35,12 +35,12 @@ Resources:
         EnvironmentName: !Ref EnvironmentName
         ApiHostedZoneId: Z0434047RQEXFDWYFBU6
 
-  TradeWsApiStack:
+  TradeApiStack:
     Type: AWS::Serverless::Application
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      Location: stacks/trade-ws-api.yaml
+      Location: stacks/trade-api.yaml
       Parameters:
         EnvironmentName: !Ref EnvironmentName
 
