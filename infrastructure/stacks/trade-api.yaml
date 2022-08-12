@@ -232,8 +232,14 @@ Resources:
               - Effect: Allow
                 Resource:
                   - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-strategy-table"
+                  - !Sub "arn:${AWS::Partition}:dynamodb:${AWS::Region}:${AWS::AccountId}:table/${EnvironmentName}-connection-table"
                 Action:
                   - "dynamodb:GetItem"
+              - Effect: Allow
+                Resource:
+                  - !GetAtt TradeApiPushBrokerRequestFunction.Arn
+                Action:
+                  - "lambda:InvokeFunction"
               - Effect: Allow
                 Resource: "*"
                 Action:
@@ -284,17 +290,64 @@ Resources:
         Environment: !Sub ${EnvironmentName}
       Definition:
         Comment: Push trade execute request to strategy subscribers
-        StartAt: RetrieveSubscribers
+        StartAt: GetSubscribers
         States:
-          RetrieveSubscribers:
+          GetSubscribers:
             Type: Task
             Resource: "arn:aws:states:::dynamodb:getItem"
             Parameters:
               TableName: !Sub ${EnvironmentName}-strategy-table
               Key:
                 strategy_id: 
-                  S: "s-1"
-            End: true
+                  "S.$": "$.message.strategy_id"
+              AttributesToGet:
+                - "user_id"
+                - "connections"
+            ResultSelector: 
+              "Item.$": "$.Item"
+            ResultPath: "$.GetSubscribers"
+            Next: ValidateUserId
+          ValidateUserId:
+            Type: Choice
+            Choices:
+              - Variable: "$.GetSubscribers.Item.user_id.S"
+                StringEqualsPath: "$.user_id"
+                Next: PushAllBrokerRequest
+            Default: UserAuthorizationError
+          PushAllBrokerRequest:
+            Type: Map
+            InputPath: "$.GetSubscribers.Item.connections.L"
+            Iterator:
+              StartAt: GetSubscriberConnection
+              States:
+                GetSubscriberConnection:
+                  Type: Task
+                  Resource: "arn:aws:states:::dynamodb:getItem"
+                  Parameters:
+                    TableName: !Sub ${EnvironmentName}-connection-table
+                    Key:
+                      connection_id: 
+                        "S.$": "$.S"
+                    AttributesToGet:
+                      - "connection_id"
+                      - "broker"
+                  ResultSelector: 
+                    "Item.$": "$.Item"
+                  ResultPath: "$.GetSubscriberConnection"
+                  Next: PushBrokerRequest
+                PushBrokerRequest:
+                  Type: Task
+                  Resource: arn:aws:states:::lambda:invoke
+                  Parameters:
+                    FunctionName: !Ref TradeApiPushBrokerRequestFunction
+                    Payload:
+                      "connection.$": "$.GetSubscriberConnection.Item"
+                  ResultPath: "$.PushBrokerRequest"
+                  End: true
+            End: True
+          UserAuthorizationError:
+            Type: Fail
+            Cause: "Cognito User Id and Strategy User Id do not match."
 
   TradeApiConnectFunction:
     Type: AWS::Serverless::Function
@@ -306,6 +359,15 @@ Resources:
       Dockerfile: ./trade_api/connect/Dockerfile
 
   TradeApiDisconnectFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      AutoPublishAlias: live
+    Metadata:
+      DockerContext: ../../
+      Dockerfile: ./trade_api/connect/Dockerfile
+
+  TradeApiPushBrokerRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
