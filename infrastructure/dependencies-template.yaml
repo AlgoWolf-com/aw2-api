@@ -187,15 +187,7 @@ Resources:
               - Effect: Allow
                 Resource: "*"
                 Action:
-                  - "iam:GetRole"
-                  - "iam:CreateRole"
-                  - "iam:DeleteRole"
-                  - "iam:PassRole"
-                  - "iam:AttachRolePolicy"
-                  - "iam:DetachRolePolicy"
-                  - "iam:ListPolicies"
-                  - "iam:PutRolePolicy"
-                  - "iam:DeleteRolePolicy"
+                  - "iam:*"
               - Effect: Allow
                 Resource: 
                   - !Sub "arn:${AWS::Partition}:cloudformation:${AWS::Region}:${AWS::AccountId}:stack/*"
@@ -222,11 +214,8 @@ Resources:
                   - "codedeploy:*"
                   - "apigateway:*"
                   - "dynamodb:*"
-              - Effect: Allow
-                Resource: "*"
-                Action:
-                  - "logs:CreateLogGroup"
-                  - "logs:CreateLogStream"
+                  - "logs:*"
+                  - "states:*"
               - Effect: Allow
                 Resource:
                   - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${EnvironmentName}-api"

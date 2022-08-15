@@ -6,6 +6,11 @@ Globals:
     Architectures:
       - x86_64
     Timeout: 30
+    DeploymentPreference:
+      Type: !If
+        - IsProd
+        - Linear10PercentEvery1Minute
+        - AllAtOnce
     Tracing: Active
     VpcConfig:
       SecurityGroupIds:
@@ -114,14 +119,28 @@ Resources:
         Variables:
           COGNITO_APP_CLIENT_ID: 6ogk3o03rlqivg2jtmslve4eu3 # TODO: Retrieve from SSM
       AutoPublishAlias: live
-      DeploymentPreference:
-        Type: !If
-          - IsProd
-          - Linear10PercentEvery1Minute
-          - AllAtOnce
     Metadata:
       DockerContext: ../../
       Dockerfile: ./user_api/http_api/Dockerfile
+
+  UserApiEmailVerificationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Events: 
+        UserEvent: 
+          Type: DynamoDB
+          Properties:
+            StartingPosition: LATEST
+            Stream: !GetAtt UserApiUserTable.StreamArn
+            FilterCriteria:
+              Filters:
+                - Pattern: '{ "eventName": [ "INSERT" ] }'
+            Enabled: true
+      AutoPublishAlias: live
+    Metadata:
+      DockerContext: ../../
+      Dockerfile: ./user_api/email_verification/Dockerfile
 
   UserApiSmsRole:
     Type: AWS::IAM::Role
@@ -292,6 +311,8 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
+      StreamSpecification:
+        StreamViewType: NEW_IMAGE
       Tags:
         - Key: Owner
           Value: "Ethan Hollins"
