@@ -264,7 +264,7 @@ Resources:
     DeletionPolicy: Delete
     UpdateReplacePolicy: Delete
     Properties:
-      LogGroupName: /aws/states/TradeApiTradeStateMachine-Logs
+      LogGroupName: !Sub /aws/states/${EnvironmentName}-TradeApiTradeStateMachine
       RetentionInDays: 365
       Tags:
         - Key: Owner
