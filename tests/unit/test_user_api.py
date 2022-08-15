@@ -24,7 +24,7 @@ def mock_settings_env_vars():
 
 @pytest.fixture
 def handler() -> Callable:
-    from user_api.function import handler
+    from user_api.http_api.function import handler
 
     return handler
 
