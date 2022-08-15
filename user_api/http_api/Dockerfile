@@ -1,4 +1,4 @@
-ARG FUNCTION_DIR=user_api
+ARG FUNCTION_DIR=user_api/http_api
 
 FROM public.ecr.aws/lambda/python:3.9 AS build-image
 

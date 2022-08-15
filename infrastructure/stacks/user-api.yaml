@@ -121,7 +121,7 @@ Resources:
           - AllAtOnce
     Metadata:
       DockerContext: ../../
-      Dockerfile: ./user_api/Dockerfile
+      Dockerfile: ./user_api/http_api/Dockerfile
 
   UserApiSmsRole:
     Type: AWS::IAM::Role
