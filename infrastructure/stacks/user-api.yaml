@@ -58,7 +58,6 @@ Resources:
 
   UserHttpApi:
     Type: AWS::Serverless::HttpApi
-    Condition: IsProdOrStaging
     Properties:
       CorsConfiguration:
         AllowCredentials: false
@@ -102,7 +101,6 @@ Resources:
 
   UserApiFunction:
     Type: AWS::Serverless::Function
-    Condition: IsProdOrStaging
     Properties:
       PackageType: Image
       Events: 
@@ -277,6 +275,96 @@ Resources:
         - email
         - family_name
         - given_name
+
+  UserApiUserTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # Condition: IsProdOrStaging
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: user_id
+          KeyType: HASH
+      TableName: !Sub ${EnvironmentName}-user-table
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
+  UserApiConnectionTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # Condition: IsProdOrStaging
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: connection_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: connection_id 
+          KeyType: HASH
+      TableName: !Sub ${EnvironmentName}-connection-table
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: !Sub ${EnvironmentName}-connection-table-gsi-user-id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection: 
+            ProjectionType: "KEYS_ONLY"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
+  UserApiStrategyTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    # Condition: IsProdOrStaging
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: strategy_id
+          AttributeType: S
+        - AttributeName: user_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: strategy_id 
+          KeyType: HASH
+      TableName: !Sub ${EnvironmentName}-strategy-table
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      GlobalSecondaryIndexes:
+        - IndexName: !Sub ${EnvironmentName}-strategy-table-gsi-user-id
+          KeySchema:
+            - AttributeName: user_id
+              KeyType: HASH
+          Projection: 
+            ProjectionType: "KEYS_ONLY"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
 
 Outputs:
   UserHttpApiDomainName:
