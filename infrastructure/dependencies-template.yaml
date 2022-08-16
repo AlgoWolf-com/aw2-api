@@ -216,6 +216,7 @@ Resources:
                   - "dynamodb:*"
                   - "logs:*"
                   - "states:*"
+                  - "sqs:*"
               - Effect: Allow
                 Resource:
                   - !Sub "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/codebuild/${EnvironmentName}-api"

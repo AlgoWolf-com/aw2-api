@@ -469,11 +469,75 @@ Resources:
         Environment: !Sub ${EnvironmentName}
       Definition:
         Comment: Process trade transactions
-        StartAt: Hello
+        StartAt: ChooseBroker
         States:
-          Hello:
-            Type: Pass
-            End: True
+          ChooseBroker:
+            Type: Choice
+            Choices:
+              - Variable: "$.message.broker"
+                StringEquals: "ig"
+                Next: ProcessIGTransaction
+            Default: BrokerNotFound
+          ProcessIGTransaction:
+            Type: Task
+            Resource: arn:aws:states:::lambda:invoke
+            Parameters:
+              FunctionName: !Ref ProcessIGTransactionFunction
+              Payload:
+                "connection_id.$": "$.message.connection_id"
+                "transaction.$": "$.message.transaction"
+            ResultPath: "$.ProcessTransaction"
+            Next: HandleTransaction
+          HandleTransaction:
+            Type: Parallel
+            Branches:
+              - StartAt:
+                States:
+                  SendListenerQueue:
+                    Type: Task
+                    Resource: "arn:aws:states:::sqs:sendMessage"
+                    Parameters:
+                      QueueUrl:
+                      "MessageBody.$": "$.ProcessTransaction"
+                      "MessageGroupId.$": "$.message.connection_id"
+              - StartAt: SaveToTransactionsDB
+                States:
+                SaveToTransactionsDB:
+                  Type: Task
+                  Resource: "arn:aws:states:::dynamodb:putItem"
+                  Parameters:
+                    TableName: !Sub ${EnvironmentName}-transactions-table
+                    Item:
+                    ConditionExpression:
+              - StartAt: ProcessBrokerAgnosticPositions
+                States:
+                ProcessBrokerAgnosticPositions:
+                  Type: Task
+                  Resource: arn:aws:states:::lambda:invoke
+                  Parameters:
+                    FunctionName: !Ref 
+                    Payload:
+            End: true
+          BrokerNotFound:
+            Type: Fail
+            Cause: Broker not found
+
+  TradeApiTransactionQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      FifoQueue: false
+      FifoThroughputLimit: perQueue
+      MaximumMessageSize: 2048
+      MessageRetentionPeriod: 60
+      QueueName: !Sub ${EnvironmentName}-TransactionQueue
+      SqsManagedSseEnabled: true
+      Tags:
+        - Key: Owner
+          Value: Ethan Hollins
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
 
   TradeApiConnectFunction:
     Type: AWS::Serverless::Function
