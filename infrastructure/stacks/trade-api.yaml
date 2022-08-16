@@ -61,6 +61,14 @@ Resources:
       AuthorizationType: NONE
       Target: !Sub integrations/${TradeApiTradeIntegration}
 
+  TradeApiPricesRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteKey: prices
+      AuthorizationType: NONE
+      Target: !Sub integrations/${TradeApiPricesIntegration}
+
   TradeApiPingRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -172,6 +180,42 @@ Resources:
                 "stateMachineArn": "${arn}"
               }
           - arn: !Ref TradeApiTradeStateMachine
+
+  TradeApiPricesIntegrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiPricesIntegrationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Ref TradeApiPricesRequestQueue
+                Action:
+                  - "sqs:SendMessage"
+
+  TradeApiPricesIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TradeApi
+      CredentialsArn: !GetAtt TradeApiPricesIntegrationRole.Arn
+      IntegrationType: AWS
+      IntegrationMethod: POST
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:sqs:path/${TradeApiPricesRequestQueue}
+      RequestTemplates: 
+        "application/json": |
+          {
+            "Action": "SendMessage",
+            "MessageBody": "$util.escapeJavaScript($input.json('$'))"
+          }
 
   TradeApiPingIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -375,3 +419,19 @@ Resources:
     Metadata:
       DockerContext: ../../
       Dockerfile: ./trade_api/connect/Dockerfile
+
+  TradeApiPricesRequestQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      ContentBasedDeduplication: true
+      DeduplicationScope: queue
+      FifoQueue: false
+      MaximumMessageSize: 1024
+      MessageRetentionPeriod: 60
+      QueueName: !Sub ${EnvironmentName}-PricesRequestQueue
+      SqsManagedSseEnabled: false
+      Tags:
+        - Key: Owner
+          Value: Ethan Hollins
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}

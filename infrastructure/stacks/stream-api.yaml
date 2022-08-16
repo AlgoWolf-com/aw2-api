@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  aw2-api-user-api
+
+  Stream api for AlgoWolf v2
+
+Parameters:
+  EnvironmentName:
+    Type: String
+
+Resources:
+  one:
+    Type: AWS::ECS::Cluster
+    Properties:
+      
+  two:
+    Type: AWS::ECS::Service
+    Properties:
+      
+  three:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      
