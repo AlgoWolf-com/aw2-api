@@ -61,6 +61,14 @@ Resources:
       AuthorizationType: NONE
       Target: !Sub integrations/${TradeApiTradeIntegration}
 
+  TradeApiTransactionRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref TradeApi
+      RouteKey: transaction
+      AuthorizationType: NONE
+      Target: !Sub integrations/${TradeApiTransactionIntegration}
+
   TradeApiPingRoute:
     Type: AWS::ApiGatewayV2::Route
     Properties:
@@ -172,6 +180,44 @@ Resources:
                 "stateMachineArn": "${arn}"
               }
           - arn: !Ref TradeApiTradeStateMachine
+
+  TradeApiTransactionIntegrationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiTransactionIntegrationPolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Ref TradeApiTransactionStateMachine
+                Action:
+                  - "states:StartExecution"
+
+  TradeApiTransactionIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref TradeApi
+      CredentialsArn: !GetAtt TradeApiTransactionIntegrationRole.Arn
+      IntegrationType: AWS
+      IntegrationMethod: POST
+      IntegrationUri: !Sub arn:${AWS::Partition}:apigateway:${AWS::Region}:states:action/StartExecution
+      RequestTemplates: 
+        "application/json": !Sub
+          - |
+              {
+                "input": "$util.escapeJavaScript($input.json('$'))",
+                "stateMachineArn": "${arn}"
+              }
+          - arn: !Ref TradeApiTransactionStateMachine
 
   TradeApiPingIntegration:
     Type: AWS::ApiGatewayV2::Integration
@@ -349,6 +395,86 @@ Resources:
             Type: Fail
             Cause: "Cognito User Id and Strategy User Id do not match."
 
+  TradeApiPushBrokerRequestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      AutoPublishAlias: live
+    Metadata:
+      DockerContext: ../../
+      Dockerfile: ./trade_api/connect/Dockerfile
+
+  TradeApiTransactionStateMachineRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: states.amazonaws.com
+            Action: "sts:AssumeRole"
+      Policies:
+        - PolicyName: !Sub ${EnvironmentName}-TradeApiTransactionStateMachinePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - "logs:CreateLogDelivery"
+                  - "logs:GetLogDelivery"
+                  - "logs:UpdateLogDelivery"
+                  - "logs:DeleteLogDelivery"
+                  - "logs:ListLogDeliveries"
+                  - "logs:PutResourcePolicy"
+                  - "logs:DescribeResourcePolicies"
+                  - "logs:DescribeLogGroups"
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - "xray:PutTraceSegments"
+                  - "xray:PutTelemetryRecords"
+                  - "xray:GetSamplingRules"
+                  - "xray:GetSamplingTargets"
+
+  TradeApiTransactionStateMachineLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub /aws/states/${EnvironmentName}-TradeApiTransactionStateMachine
+      RetentionInDays: 365
+      Tags:
+        - Key: Owner
+          Value: "Ethan Hollins"
+        - Key: Environment
+          Value: !Sub ${EnvironmentName}
+
+  TradeApiTransactionStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Role: !GetAtt TradeApiTransactionStateMachineRole.Arn
+      Type: EXPRESS
+      Logging:
+        Level: ALL
+        IncludeExecutionData: true
+        Destinations:
+          - CloudWatchLogsLogGroup:
+              LogGroupArn: !GetAtt TradeApiTransactionStateMachineLogGroup.Arn
+      Tracing: 
+        Enabled: true
+      Tags:
+        Owner: "Ethan Hollins"
+        Environment: !Sub ${EnvironmentName}
+      Definition:
+        Comment: Process trade transactions
+        StartAt: Hello
+        States:
+          Hello:
+            Type: Pass
+            End: True
+
   TradeApiConnectFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -359,15 +485,6 @@ Resources:
       Dockerfile: ./trade_api/connect/Dockerfile
 
   TradeApiDisconnectFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      PackageType: Image
-      AutoPublishAlias: live
-    Metadata:
-      DockerContext: ../../
-      Dockerfile: ./trade_api/connect/Dockerfile
-
-  TradeApiPushBrokerRequestFunction:
     Type: AWS::Serverless::Function
     Properties:
       PackageType: Image
